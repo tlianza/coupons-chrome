@@ -1,0 +1,141 @@
+<html>
+
+<script>
+var checkedDomains = new Array();
+var currentTabs = new Array();
+
+var animationFrames = 36;
+var animationSpeed = 20; // ms
+var canvas;
+var canvasContext;
+var rotation = 0;
+var couponImage;
+
+chrome.extension.onRequest.addListener(function(request, sender) {
+ console.log("Sender: "+sender.tab.id);
+ if (request.msg == "pageLoaded") {
+  var host = parseHost(request.href);
+  
+  //if we've already checked the domain, don't hit the web again
+  if(checkedDomains[host] != null)
+    return handleCouponsResponse(checkedDomains[host], sender.tab.id);
+  
+  //go grab coupons from the api
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "http://coupons.wishpot.com/merchant/"+host+"?format=json", true);
+  xhr.send();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4) {
+      checkedDomains[host] = JSON.parse(xhr.responseText);
+      handleCouponsResponse(checkedDomains[host], sender.tab.id);
+    };
+  };
+ }
+ else
+ {
+  console.warn("not sure how to handle request: "+request.msg);
+ }
+});
+
+
+var urlpattern = new RegExp("(http|ftp|https)://(.*?)/.*$");
+function parseHost(url)
+{
+ console.log("Parsing host out of: "+url);
+ var parsedurl = url.match(urlpattern);
+ var host = parsedurl[2];
+ var parts = host.split('.');
+  if (parts.length > 2)
+  {
+    var lastIndex = host.lastIndexOf(".");
+
+    //we're dealing with a .com or other 3-letter extension
+    if (lastIndex < host.length - 3)
+    {
+      var index = host.lastIndexOf(".", lastIndex - 1);
+      host = host.substring(index + 1);
+    }
+
+    //we're dealing with a .co.uk or .co.nz and have more to strip - 
+    //delete everything before the first www.
+    if (parts.Length > 3 && parts[parts.length - 2].length <= 2)
+    {
+      host = host.substring(host.indexOf(".") + 1);
+    }
+  }
+  return host;
+}
+
+function ease(x) {
+  return (1-Math.sin(Math.PI/2+x*Math.PI))/2;
+}
+
+function animateFlip(tabId) {
+  rotation += 1/animationFrames;
+  drawIconAtRotation(tabId);
+
+  if (rotation <= 1) {
+    setTimeout("animateFlip("+tabId+")", animationSpeed);
+  } else {
+    rotation = 0;
+    drawIconAtRotation(tabId);
+  }
+}
+
+function drawIconAtRotation(tabId) {
+  //console.log("Drawing icon on tab "+tabId+" at rotation: "+rotation);
+  canvasContext.save();
+  canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+  canvasContext.translate(
+      Math.ceil(canvas.width/2),
+      Math.ceil(canvas.height/2));
+  canvasContext.rotate(2*Math.PI*ease(rotation));
+  canvasContext.drawImage(couponImage,
+      -Math.ceil(canvas.width/2),
+      -Math.ceil(canvas.height/2));
+  canvasContext.restore();
+
+  chrome.pageAction.setIcon({"tabId":tabId, imageData:canvasContext.getImageData(0, 0,
+      canvas.width,canvas.height)});
+}
+
+function handleCouponsResponse(jsonResponse, tabId)
+{
+  if(jsonResponse.length > 0)
+  {
+    currentTabs[tabId] = jsonResponse;
+    chrome.pageAction.show(tabId);
+    animateFlip(tabId);
+    chrome.pageAction.setTitle({"tabId":tabId, "title": "Found "+jsonResponse.length+" coupons on this site."});
+    console.log("Showing icon in tab: "+tabId);
+  }  
+  else
+  {
+    console.log("No coupons found for tabId: "+tabId);
+    chrome.pageAction.hide(tabId);
+  }
+}
+
+function getCouponsForTab(tabId)
+{
+ console.log("Coupons requested for tab: "+tabId);
+ return currentTabs[tabId];
+}
+
+function init() {
+  canvas = document.getElementById('canvas');
+  couponImage = document.getElementById('coupons_present');
+  canvasContext = canvas.getContext('2d');
+
+  chrome.pageAction.setIcon({path: "wp19_lit.png"});
+  startRequest();
+}
+
+</script>
+
+<body onload="init()">
+  <img id="coupons_present" src="wp19_lit.png">
+  <canvas id="canvas" width="19" height="19">
+</body>
+
+</html>

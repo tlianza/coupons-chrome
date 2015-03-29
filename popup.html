@@ -1,0 +1,49 @@
+<html>
+<style type="text/css">
+  body{font-family:'Century Gothic','HelveticaNeue-Light','Helvetica Neue Light','Helvetica Neue',Helvetica,Arial,sans-serif;}
+  #couponTable {font-size:8pt;}
+  #x { position: absolute; right: 15px; top: 20px; }
+  #tableTitle img {max-width: 200px; max-height: 50px; text-align: center;}
+  #couponTable .odd { background-color: #EFF5FB; }
+  #couponTable { width: 300px; }
+</style>
+<script>
+function main() {
+  chrome.tabs.getSelected(null, function(tab) {
+    console.log("grabbing coupons" );
+    var coupons = chrome.extension.getBackgroundPage().getCouponsForTab(tab.id);
+    
+    //if we have an icon, write that first
+    if(coupons[0].merchant_image_url != null && coupons[0].merchant_image_url.length > 0)
+    {
+      var t = document.getElementById("tableTitle");
+      t.innerHTML = "<a href=\""+coupons[0].merchant_url+"\" target=\"_blank\"><img src=\""+coupons[0].merchant_image_url+"\" border=\"0\" /></a>";
+    }
+    
+    //document.getElementById("x").href="javascript:chrome.pageAction.hide("+tab.id+")";
+    
+    var tableBody = "";
+    for (var i=0; i < coupons.length; i++)
+     {
+       tableBody +="<tr"+((i%2==0)?" class=\"odd\" ":"")+"><td>";
+       tableBody +="<a href=\""+coupons[i].deal_url+"\" target=\"_blank\">";
+       tableBody += coupons[i].description+"</a>";
+       if(coupons[i].coupon_code != null && coupons[i].coupon_code.length > 0)
+        tableBody += " <b>Code: "+coupons[i].coupon_code+"</b>";
+       tableBody += "</td></tr>";
+     }
+     var couponTable = document.getElementById("couponTable");
+     couponTable.innerHTML=tableBody;
+    }
+  );
+}
+</script>
+<body onload="javascript:main()">
+
+
+<div id="tableTitle" >Coupons!</div>
+<a id="x" href="javascript:window.close();">x</a>
+<table id="couponTable"></table>
+
+</body>
+</html>

@@ -1,0 +1,1 @@
+chrome.extension.sendRequest({msg: "pageLoaded", href: location.href});

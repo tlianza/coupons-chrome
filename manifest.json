@@ -1,0 +1,23 @@
+{
+  // Required
+  "name": "Coupon Detector",
+  "version": "1.0",
+
+  // Recommended
+  "description": "Wishpot's shopping engine detects coupons on the web",
+  "icons": { "48": "wp48.png"},
+
+  "permissions": ["tabs", "http://*.wishpot.com/"],
+  "background_page": "background.html",
+  
+  "content_scripts": [ {
+      "js": [ "doc_start.js" ],
+      "matches": [ "http://*/*", "https://*/*" ]
+   }],
+  
+  "page_action": {
+    "default_icon": "wp19_lit.png", // required
+    "default_title": "Coupon detected for this site",      // optional; shown in tooltip
+    "popup": "popup.html"
+  }
+}
